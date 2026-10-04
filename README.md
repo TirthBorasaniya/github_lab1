@@ -7,14 +7,16 @@ Based on `Labs/Github_Labs/Lab1` from the IE-7374 MLOps course repository. The o
 ## Modifications
 
 ### 1. Scientific functions (`src/calculator.py`)
-The original `fun1` to `fun4` are kept with the same behavior. Added:
+The original `fun1` to `fun4` are kept and return the same results. Added 17 functions:
 
-| Category | Functions |
-| --- | --- |
-| Arithmetic | `divide`, `power`, `absolute` |
-| Roots and logarithms | `sqrt`, `nth_root` (real odd roots of negatives), `log` (any base, default 10), `ln`, `exp` |
-| Trigonometry | `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, each in degree or radian mode |
-| Combinatorics | `factorial`, `n_choose_r` (nCr), `n_permute_r` (nPr) |
+| Category | Python functions | In expressions |
+| --- | --- | --- |
+| Arithmetic | `divide`, `power`, `absolute` | `6 / 3`, `2 ^ 3`, `abs(-4)` |
+| Roots and logarithms | `sqrt`, `nth_root`, `log`, `ln`, `exp` | `sqrt(16)`, `root(27, 3)`, `log(100)` or `log(8, 2)`, `ln(e)`, `exp(1)` |
+| Trigonometry | `sin`, `cos`, `tan`, `asin`, `acos`, `atan` | Same names, such as `sin(30)`; degree or radian mode |
+| Combinatorics | `factorial`, `n_choose_r`, `n_permute_r` | `fact(5)`, `nCr(5, 2)`, `nPr(5, 2)` |
+
+`nth_root` returns real odd roots of negative numbers, such as `root(-8, 3)` giving `-2`. `log` defaults to base 10.
 
 All functions validate input: non-numbers raise `TypeError`, and undefined operations such as `sqrt(-1)`, `log(0)`, `tan(90)` in degrees, or `1/0` raise `ValueError` or `ZeroDivisionError`. Floating-point residue is snapped to zero, so `sin(180)` in degrees returns exactly `0`.
 
@@ -27,7 +29,7 @@ Full expressions can be entered, as on a physical scientific calculator:
 2^3^2                       -> 512
 ```
 
-Supported: `+ - * / ^` with standard precedence, parentheses, unary minus, the constants `pi` and `e`, and every function in this README. The evaluator walks Python's abstract syntax tree and allows only whitelisted operations. It never calls `eval`, so input such as `__import__('os').system(...)` is rejected rather than executed.
+Supported: `+ - * / ^` with standard precedence, parentheses, unary minus, the constants `pi` and `e`, the expression names in the tables above and below, and binary, octal, and hex literals. The evaluator walks Python's abstract syntax tree and allows only whitelisted operations. It never calls `eval`, so input such as `__import__('os').system(...)` is rejected rather than executed.
 
 ### 3. Calculator features and command-line interface (`src/scientific_calculator.py`)
 A `ScientificCalculator` class adds standard calculator features:
@@ -58,7 +60,7 @@ range(1, 5, 3) * 2              -> 8
 Integer conversion between decimal and bases 2 to 36, with standard prefixes for binary, octal, and hexadecimal:
 - **Output:** `hex 255` gives `0xff`; `bin` alone converts the previous result
 - **Input:** binary, octal, and hex values can be typed directly into expressions, such as `0b1010 + 0xff` giving `265`
-- **Functions:** `to_base(n, base)`, `from_base(text, base)`, and `format_in_base(value, name)`
+- **Python functions:** `to_base(n, base)`, `from_base(text, base)`, and `format_in_base(value, name)`
 
 ## Usage
 
@@ -138,6 +140,8 @@ Running `pytest` also collects the unittest tests, so it reports the combined to
 
 ## Setup
 
+Requires Python 3.10 or newer.
+
 ```bash
 python -m venv github_lab1_env
 source github_lab1_env/bin/activate      # Windows: github_lab1_env\Scripts\activate
@@ -146,4 +150,12 @@ pip install -r requirements.txt
 pytest
 python -m unittest discover -s test -t . -p "test_unittest.py" -v
 flake8 src test --max-line-length 100
+```
+
+The tests can also be run from inside the `test` folder, as in the original lab instructions:
+
+```bash
+cd test
+pytest test_pytest.py
+python test_unittest.py
 ```

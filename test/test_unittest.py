@@ -4,14 +4,19 @@ Uses subTest for case tables and assertRaises for error paths.
 """
 
 import io
+import sys
 import unittest
 from contextlib import redirect_stdout
+from pathlib import Path
 
-from src import base_conversion as base
-from src import calculator as calc
-from src import statistics_mode as stats
-from src.expression import evaluate
-from src.scientific_calculator import ScientificCalculator, main
+# allow running this file directly from the test folder, as in the original lab instructions
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from src import base_conversion as base  # noqa: E402
+from src import calculator as calc  # noqa: E402
+from src import statistics_mode as stats  # noqa: E402
+from src.expression import evaluate  # noqa: E402
+from src.scientific_calculator import ScientificCalculator, main  # noqa: E402
 
 EXPRESSION_CASE_LIST = [
     # (expression, angle_mode, expected)
