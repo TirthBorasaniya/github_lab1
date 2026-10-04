@@ -56,3 +56,11 @@ jobs:
         if: always()
         run: |
           echo "### Pytest on Python ${{ matrix.python-version }}: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify on success
+        if: success()
+        run: echo "Tests passed successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Tests failed"

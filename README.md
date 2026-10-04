@@ -109,6 +109,7 @@ Running `pytest` also collects the unittest tests, so it reports the combined to
 | Triggers | Push to main | Push, pull request to main, manual run |
 | Quality checks | Tests only | flake8 lint, 90 percent coverage minimum, CLI smoke test |
 | Reporting | JUnit XML artifact | JUnit XML artifact per Python version, job summary |
+| Notifications | Success and failure messages | Kept in both workflows |
 
 ## Project structure
 

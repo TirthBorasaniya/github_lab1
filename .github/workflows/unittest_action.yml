@@ -32,3 +32,11 @@ jobs:
 
       - name: Run unittests
         run: python -m unittest discover -s test -t . -p "test_unittest.py" -v
+
+      - name: Notify on success
+        if: success()
+        run: echo "Unit tests passed successfully"
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Unit tests failed"
