@@ -9,6 +9,7 @@ import math
 from functools import partial
 
 from src import calculator as calc
+from src import statistics_mode as stats
 
 MAX_EXPRESSION_LENGTH = 200
 CONSTANT_DICT = {"pi": math.pi, "e": math.e}
@@ -37,6 +38,16 @@ PLAIN_FUNCTION_DICT = {
     "fact": calc.factorial,
     "nCr": calc.n_choose_r,
     "nPr": calc.n_permute_r,
+    "mean": stats.mean,
+    "median": stats.median,
+    "mode": stats.mode,
+    "var": stats.variance,
+    "pvar": stats.pvariance,
+    "std": stats.stdev,
+    "pstd": stats.pstdev,
+    "min": stats.minimum,
+    "max": stats.maximum,
+    "range": stats.value_range,
 }
 
 
@@ -102,8 +113,9 @@ def evaluate(expression, angle_mode=calc.DEFAULT_ANGLE_MODE, ans=0.0, memory=0.0
     Evaluate a calculator expression without using eval.
 
     Supports + - * / and ^ (or **) with standard precedence, unary minus, parentheses,
-    the constants pi and e, the names ans and mem, and the functions in
-    PLAIN_FUNCTION_DICT and ANGLE_FUNCTION_DICT. Example: "2*sin(30) + sqrt(16)".
+    the constants pi and e, the names ans and mem, binary, octal, and hex literals
+    (0b1010, 0o17, 0xff), and the functions in PLAIN_FUNCTION_DICT and ANGLE_FUNCTION_DICT.
+    Example: "2*sin(30) + sqrt(16)".
 
     Parameters
     ----------
