@@ -1,15 +1,15 @@
 """
-Pytest suite for the scientific calculator covering functions, expression parsing, state, and CLI.
-Includes data-driven cases loaded from data/test_cases.csv.
+Pytest suite for the scientific calculator covering functions, statistics, base conversion,
+expression parsing, calculator state, and the command-line interface.
 """
 
-import csv
 import math
-from pathlib import Path
 
 import pytest
 
+from src import base_conversion as base
 from src import calculator as calc
+from src import statistics_mode as stats
 from src.expression import MAX_EXPRESSION_LENGTH, evaluate
 from src.scientific_calculator import (
     HELP_TEXT,
@@ -21,19 +21,36 @@ from src.scientific_calculator import (
     run_repl,
 )
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "test_cases.csv"
-
-
-def load_test_cases(csv_path):
-    """Load (expression, angle_mode, expected) tuples from the test case CSV."""
-    with open(csv_path, newline="") as f:
-        return [
-            (row["expression"], row["angle_mode"], float(row["expected"]))
-            for row in csv.DictReader(f)
-        ]
-
-
-TEST_CASE_LIST = load_test_cases(DATA_PATH)
+EXPRESSION_CASE_LIST = [
+    # (expression, angle_mode, expected)
+    ('2+3', 'rad', 5.0),
+    ('10-4', 'rad', 6.0),
+    ('6*7', 'rad', 42.0),
+    ('7/2', 'rad', 3.5),
+    ('2^10', 'rad', 1024.0),
+    ('2^3^2', 'rad', 512.0),
+    ('-(3+4)*2', 'rad', -14.0),
+    ('sqrt(144)', 'rad', 12.0),
+    ('root(27,3)', 'rad', 3.0),
+    ('root(-8,3)', 'rad', -2.0),
+    ('log(1000)', 'rad', 3.0),
+    ('log(8,2)', 'rad', 3.0),
+    ('ln(e)', 'rad', 1.0),
+    ('exp(0)', 'rad', 1.0),
+    ('abs(-3.5)', 'rad', 3.5),
+    ('sin(30)', 'deg', 0.5),
+    ('cos(60)', 'deg', 0.5),
+    ('tan(45)', 'deg', 1.0),
+    ('sin(pi/2)', 'rad', 1.0),
+    ('cos(pi)', 'rad', -1.0),
+    ('asin(1)', 'deg', 90.0),
+    ('atan(1)', 'deg', 45.0),
+    ('fact(5)', 'rad', 120.0),
+    ('nCr(5,2)', 'rad', 10.0),
+    ('nPr(5,2)', 'rad', 20.0),
+    ('2*sin(30)+sqrt(16)', 'deg', 5.0),
+    ('fact(4)/nCr(4,2)', 'rad', 4.0),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -165,15 +182,117 @@ def test_scientific_function_errors(func, args, exc):
 
 
 # ---------------------------------------------------------------------------
+# Statistics mode
+# ---------------------------------------------------------------------------
+
+SPREAD_VALUES = (2, 4, 4, 4, 5, 5, 7, 9)
+
+
+@pytest.mark.parametrize(
+    "func, values, expected",
+    [
+        (stats.mean, (2, 4, 4, 5), 3.75),
+        (stats.median, (3, 1, 2), 2),
+        (stats.median, (4, 1, 3, 2), 2.5),
+        (stats.mode, (1, 2, 2, 3), 2),
+        (stats.mode, (3, 1, 3, 1), 1),
+        (stats.variance, SPREAD_VALUES, 32 / 7),
+        (stats.pvariance, SPREAD_VALUES, 4),
+        (stats.stdev, SPREAD_VALUES, math.sqrt(32 / 7)),
+        (stats.pstdev, SPREAD_VALUES, 2),
+        (stats.minimum, (3, -1, 2), -1),
+        (stats.maximum, (3, -1, 2), 3),
+        (stats.value_range, (1, 5, 3), 4),
+        (stats.mean, (7,), 7),
+    ],
+)
+def test_statistics(func, values, expected):
+    assert func(*values) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "func, values, exc",
+    [
+        (stats.mean, (), ValueError),
+        (stats.median, (), ValueError),
+        (stats.variance, (5,), ValueError),
+        (stats.stdev, (5,), ValueError),
+        (stats.mean, (1, "2"), TypeError),
+        (stats.maximum, (1, None), TypeError),
+        (stats.pstdev, (1, float("nan")), ValueError),
+    ],
+)
+def test_statistics_errors(func, values, exc):
+    with pytest.raises(exc):
+        func(*values)
+
+
+# ---------------------------------------------------------------------------
+# Number base conversion
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "n, target_base, expected",
+    [(10, 2, "1010"), (255, 16, "ff"), (8, 8, "10"), (0, 2, "0"), (-5, 2, "-101"),
+     (35, 36, "z"), (10.0, 2, "1010")],
+)
+def test_to_base(n, target_base, expected):
+    assert base.to_base(n, target_base) == expected
+
+
+@pytest.mark.parametrize(
+    "text, source_base, expected",
+    [("1010", 2, 10), ("FF", 16, 255), ("0xff", 16, 255), ("0o17", 8, 15),
+     ("-101", 2, -5), ("+z", 36, 35), (" 0b11 ", 2, 3)],
+)
+def test_from_base(text, source_base, expected):
+    assert base.from_base(text, source_base) == expected
+
+
+@pytest.mark.parametrize("n", [0, 1, 7, 255, -1000, 123456789])
+@pytest.mark.parametrize("target_base", [2, 8, 16, 36])
+def test_base_round_trip(n, target_base):
+    assert base.from_base(base.to_base(n, target_base), target_base) == n
+
+
+@pytest.mark.parametrize(
+    "func, args, exc",
+    [
+        (base.to_base, (10, 1), ValueError),
+        (base.to_base, (10, 37), ValueError),
+        (base.to_base, (2.5, 2), ValueError),
+        (base.to_base, ("5", 2), TypeError),
+        (base.from_base, ("102", 2), ValueError),
+        (base.from_base, ("g", 16), ValueError),
+        (base.from_base, ("", 2), ValueError),
+        (base.from_base, ("0x", 16), ValueError),
+        (base.from_base, (5, 2), TypeError),
+        (base.format_in_base, (10, "ter"), ValueError),
+    ],
+)
+def test_base_conversion_errors(func, args, exc):
+    with pytest.raises(exc):
+        func(*args)
+
+
+@pytest.mark.parametrize(
+    "value, base_name, expected",
+    [(255, "hex", "0xff"), (-10, "bin", "-0b1010"), (10.0, "oct", "0o12"), (255, "dec", "255")],
+)
+def test_format_in_base(value, base_name, expected):
+    assert base.format_in_base(value, base_name) == expected
+
+
+# ---------------------------------------------------------------------------
 # Expression evaluator
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
     "expression, angle_mode, expected",
-    TEST_CASE_LIST,
-    ids=[case[0] for case in TEST_CASE_LIST],
+    EXPRESSION_CASE_LIST,
+    ids=[case[0] for case in EXPRESSION_CASE_LIST],
 )
-def test_expression_cases_from_csv(expression, angle_mode, expected):
+def test_expression_cases(expression, angle_mode, expected):
     assert evaluate(expression, angle_mode=angle_mode) == pytest.approx(expected)
 
 
@@ -182,6 +301,23 @@ def test_expression_cases_from_csv(expression, angle_mode, expected):
     [("2+3*4", 14), ("(2+3)*4", 20), ("-2^2", -4), ("2^-1", 0.5), ("2**3", 8), ("+5", 5)],
 )
 def test_operator_precedence(expression, expected):
+    assert evaluate(expression) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        ("mean(2, 4, 4, 5)", 3.75),
+        ("median(3, 1, 2)", 2),
+        ("mode(1, 2, 2, 3)", 2),
+        ("pstd(2, 4, 4, 4, 5, 5, 7, 9)", 2),
+        ("range(1, 5, 3) * 2", 8),
+        ("max(1, sqrt(16), 3)", 4),
+        ("0b1010 + 0xff", 265),
+        ("0o17 * 2", 30),
+    ],
+)
+def test_expression_statistics_and_literals(expression, expected):
     assert evaluate(expression) == pytest.approx(expected)
 
 
@@ -211,6 +347,7 @@ def test_named_values():
         "2+",
         "1e400",
         "1" * (MAX_EXPRESSION_LENGTH + 1),
+        "mean()",
     ],
 )
 def test_evaluate_rejects_unsafe_or_invalid_input(expression):
@@ -328,6 +465,29 @@ def test_run_repl_session():
     assert "1: sin(pi/2) = 1" in output_list
 
 
+@pytest.mark.parametrize(
+    "line_list, expected",
+    [
+        (["hex 255"], "0xff"),
+        (["10", "bin"], "0b1010"),
+        (["oct 8"], "0o10"),
+        (["HEX nCr(10, 5)"], "0xfc"),
+        (["mode (4, 4, 5)"], "4"),
+        (["mode(1, 2, 2)"], "2"),
+    ],
+)
+def test_handle_command_base_and_statistics(line_list, expected):
+    calculator = ScientificCalculator()
+    for line in line_list:
+        output = handle_command(calculator, line)
+    assert output == expected
+
+
+def test_handle_command_base_rejects_non_integer():
+    with pytest.raises(ValueError):
+        handle_command(ScientificCalculator(), "hex 2.5")
+
+
 def test_run_repl_ends_on_eof():
     def raise_eof(_):
         raise EOFError
@@ -347,6 +507,12 @@ def test_main_radian_mode(capsys):
     assert capsys.readouterr().out.strip() == "-1"
 
 
+def test_main_base_output(capsys):
+    assert main(["--expr", "255", "--base", "hex"]) == 0
+    assert capsys.readouterr().out.strip() == "0xff"
+
+
 def test_main_error_exit_code(capsys):
     assert main(["--expr", "sqrt(-1)"]) == 1
     assert "error" in capsys.readouterr().err
+    assert main(["--expr", "2.5", "--base", "bin"]) == 1
