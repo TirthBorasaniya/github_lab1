@@ -4,9 +4,11 @@ Provides a command-line interface for one-shot evaluation and interactive sessio
 """
 
 import argparse
+import re
 import sys
 
 from src import calculator as calc
+from src.base_conversion import BASE_NAME_DICT, format_in_base
 from src.expression import evaluate
 
 DEFAULT_ANGLE_MODE = "deg"
@@ -14,10 +16,14 @@ MAX_HISTORY = 50
 RESULT_PRECISION = 12
 EXIT_COMMANDS = ("quit", "exit")
 CALCULATOR_ERRORS = (ValueError, TypeError, ZeroDivisionError, OverflowError)
+ANGLE_COMMAND_PATTERN = re.compile(r"mode\s+([a-z]+)")
+BASE_COMMAND_PATTERN = re.compile(r"(bin|oct|hex)(?:\s+(.+))?", re.IGNORECASE)
 HELP_TEXT = (
     "commands: mode deg | mode rad | m+ | m- | mr | mc | history | help | quit\n"
-    "operators: + - * / ^ ( )   constants: pi e ans mem\n"
-    "functions: sin cos tan asin acos atan sqrt root log ln exp abs fact nCr nPr"
+    "base:     bin | oct | hex (convert ans), or bin <expr> | oct <expr> | hex <expr>\n"
+    "operators: + - * / ^ ( )   constants: pi e ans mem   literals: 0b1010 0o17 0xff\n"
+    "functions: sin cos tan asin acos atan sqrt root log ln exp abs fact nCr nPr\n"
+    "statistics: mean median mode var pvar std pstd min max range"
 )
 
 
@@ -126,9 +132,16 @@ def handle_command(calculator, line):
         return ""
     if lowered == "help":
         return HELP_TEXT
-    if lowered.startswith("mode "):
-        calculator.set_angle_mode(lowered.split(maxsplit=1)[1])
+    # a bare word after "mode" is the angle command; "mode(1, 2, 2)" is the statistics function
+    angle_match = ANGLE_COMMAND_PATTERN.fullmatch(lowered)
+    if angle_match:
+        calculator.set_angle_mode(angle_match.group(1))
         return f"angle mode: {calculator.angle_mode}"
+    base_match = BASE_COMMAND_PATTERN.fullmatch(command)
+    if base_match:
+        base_name, expression = base_match.group(1).lower(), base_match.group(2)
+        value = calculator.ans if expression is None else calculator.evaluate(expression)
+        return format_in_base(value, base_name)
     if lowered == "m+":
         calculator.memory_add()
         return f"M = {format_result(calculator.memory)}"
@@ -180,6 +193,7 @@ def main(argv=None):
 
     Usage:
         python -m src.scientific_calculator --expr "2*sin(30) + sqrt(16)"
+        python -m src.scientific_calculator --expr "255" --base hex
         python -m src.scientific_calculator --mode rad
 
     Parameters
@@ -195,6 +209,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Scientific calculator")
     parser.add_argument("--expr", help="evaluate one expression and exit")
     parser.add_argument("--mode", choices=calc.ANGLE_MODES, default=DEFAULT_ANGLE_MODE)
+    parser.add_argument("--base", choices=tuple(BASE_NAME_DICT), default="dec",
+                        help="output base for --expr; non-decimal bases require an integer result")
     args = parser.parse_args(argv)
 
     calculator = ScientificCalculator(angle_mode=args.mode)
@@ -203,7 +219,9 @@ def main(argv=None):
         return 0
 
     try:
-        print(format_result(calculator.evaluate(args.expr)))
+        result = calculator.evaluate(args.expr)
+        output = format_result(result) if args.base == "dec" else format_in_base(result, args.base)
+        print(output)
     except CALCULATOR_ERRORS as err:
         print(f"error: {err}", file=sys.stderr)
         return 1
